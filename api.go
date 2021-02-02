@@ -20,7 +20,7 @@ type apiBadHttpBody struct {
 }
 
 func (self *apiBadHttpBody) Error() string {
-	return "bad HTTP response: " + string(self.body)
+	return "bad HTTP body: " + string(self.body)
 }
 
 var pkgMgrActions2api = map[PkgMgrAction]string{
