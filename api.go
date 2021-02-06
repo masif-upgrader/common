@@ -3,6 +3,7 @@ package common
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 )
 
 var ApiTlsMinVersion uint16 = tls.VersionTLS12
@@ -16,11 +17,12 @@ var ApiTlsCipherSuites = []uint16{
 }
 
 type apiBadHttpBody struct {
-	body []byte
+	body   []byte
+	reason string
 }
 
 func (self *apiBadHttpBody) Error() string {
-	return "bad HTTP body: " + string(self.body)
+	return fmt.Sprintf("bad HTTP body %#v: %s", string(self.body), self.reason)
 }
 
 var pkgMgrActions2api = map[PkgMgrAction]string{
@@ -66,8 +68,8 @@ func PkgMgrTasks2Api(tasks map[PkgMgrTask]struct{}) (jsn []byte, err error) {
 
 func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 	var unJson interface{}
-	if json.Unmarshal(body, &unJson) != nil {
-		return nil, &apiBadHttpBody{body: body}
+	if errJU := json.Unmarshal(body, &unJson); errJU != nil {
+		return nil, &apiBadHttpBody{body, errJU.Error()}
 	}
 
 	tasks = map[PkgMgrTask]struct{}{}
@@ -82,10 +84,10 @@ func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 					if packageNameIsString && packageNameString != "" {
 						nextTask.PackageName = packageNameString
 					} else {
-						return nil, &apiBadHttpBody{body: body}
+						return nil, &apiBadHttpBody{body, "package must be a non-empty string"}
 					}
 				} else {
-					return nil, &apiBadHttpBody{body: body}
+					return nil, &apiBadHttpBody{body, "package missing"}
 				}
 
 				if action, hasAction := taskObject["action"]; hasAction {
@@ -93,13 +95,13 @@ func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 						if validAction, actionIsValid := api2pkgMgrActions[actionString]; actionIsValid {
 							nextTask.Action = validAction
 						} else {
-							return nil, &apiBadHttpBody{body: body}
+							return nil, &apiBadHttpBody{body, fmt.Sprintf("bad action: %#v", actionString)}
 						}
 					} else {
-						return nil, &apiBadHttpBody{body: body}
+						return nil, &apiBadHttpBody{body, "action must be a non-empty string"}
 					}
 				} else {
-					return nil, &apiBadHttpBody{body: body}
+					return nil, &apiBadHttpBody{body, "action missing"}
 				}
 
 				if fromVersion, hasFromVersion := taskObject["from_version"]; hasFromVersion {
@@ -107,7 +109,7 @@ func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 					if fromVersionIsString && fromVersionString != "" {
 						nextTask.FromVersion = fromVersionString
 					} else {
-						return nil, &apiBadHttpBody{body: body}
+						return nil, &apiBadHttpBody{body, "from_version must be a non-empty string"}
 					}
 				}
 
@@ -116,7 +118,7 @@ func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 					if toVersionIsString && toVersionString != "" {
 						nextTask.ToVersion = toVersionString
 					} else {
-						return nil, &apiBadHttpBody{body: body}
+						return nil, &apiBadHttpBody{body, "to_version must be a non-empty string"}
 					}
 				}
 
@@ -135,16 +137,16 @@ func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 				}
 
 				if !hasVersions {
-					return nil, &apiBadHttpBody{body: body}
+					return nil, &apiBadHttpBody{body, "too many/few versions"}
 				}
 
 				tasks[nextTask] = struct{}{}
 			} else {
-				return nil, &apiBadHttpBody{body: body}
+				return nil, &apiBadHttpBody{body, "task must be an object"}
 			}
 		}
 	} else {
-		return nil, &apiBadHttpBody{body: body}
+		return nil, &apiBadHttpBody{body, "must be an array"}
 	}
 
 	return
