@@ -136,7 +136,9 @@ func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 				}
 
 				if !hasVersions {
-					return nil, &apiBadHttpBody{body, "too many/few versions"}
+					return nil, &apiBadHttpBody{
+						body, "too many/few versions for an " + taskObject["action"].(string) + " action",
+					}
 				}
 
 				tasks[nextTask] = struct{}{}
