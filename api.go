@@ -132,7 +132,7 @@ func Api2PkgMgrTasks(body []byte) (tasks map[PkgMgrTask]struct{}, err error) {
 				case PkgMgrConfigure:
 					hasVersions = (nextTask.FromVersion == "") != (nextTask.ToVersion == "")
 				case PkgMgrRemove, PkgMgrPurge:
-					hasVersions = nextTask.FromVersion != "" && nextTask.ToVersion != ""
+					hasVersions = nextTask.FromVersion != ""
 				}
 
 				if !hasVersions {
